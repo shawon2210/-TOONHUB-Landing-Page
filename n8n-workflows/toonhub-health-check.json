@@ -1,0 +1,116 @@
+{
+  "name": "TOONHUB Landing Health Check",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger (Every 30min)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "url": "https://shawon2210.github.io/toonhub-landing/",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "string",
+              "fullResponse": true
+            }
+          },
+          "timeout": 10000
+        }
+      },
+      "id": "check-landing",
+      "name": "Check Landing Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "status-check",
+              "leftValue": "={{ $json.statusCode }}",
+              "rightValue": 200,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "check-status",
+      "name": "Status OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "command": "echo \"TOONHUB landing page is UP — HTTP {{$json[\"statusCode\"]}} at $(date)\""
+      },
+      "id": "log-ok",
+      "name": "Log OK",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "command": "echo \"ALERT: TOONHUB landing page is DOWN — HTTP {{$json[\"statusCode\"] || 'TIMEOUT'}} at $(date)\""
+      },
+      "id": "log-error",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger (Every 30min)": {
+      "main": [
+        [{ "node": "Check Landing Page", "type": "main", "index": 0 }]
+      ]
+    },
+    "Check Landing Page": {
+      "main": [
+        [{ "node": "Status OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Status OK?": {
+      "main": [
+        [{ "node": "Log OK", "type": "main", "index": 0 }],
+        [{ "node": "Log Error", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "monitoring" },
+    { "name": "health-check" },
+    { "name": "toonhub" }
+  ]
+}
