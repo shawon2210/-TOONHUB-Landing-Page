@@ -25,50 +25,46 @@ const IMAGES = [
 ];
 
 type Role = 'center' | 'left' | 'right' | 'back';
+type ScreenSize = 'mobile' | 'tablet' | 'desktop';
 
-function getRoleStyle(role: Role, isMobile: boolean) {
-  switch (role) {
-    case 'center':
-      return {
-        transform: `translateX(-50%) scale(${isMobile ? 1.25 : 1.68})`,
-        filter: 'blur(0px)',
-        opacity: 1,
-        zIndex: 20,
-        left: '50%',
-        height: isMobile ? '60%' : '92%',
-        bottom: isMobile ? '22%' : 0,
-      };
-    case 'left':
-      return {
-        transform: 'translateX(-50%) scale(1)',
-        filter: 'blur(2px)',
-        opacity: 0.85,
-        zIndex: 10,
-        left: isMobile ? '20%' : '30%',
-        height: isMobile ? '16%' : '28%',
-        bottom: isMobile ? '32%' : '12%',
-      };
-    case 'right':
-      return {
-        transform: 'translateX(-50%) scale(1)',
-        filter: 'blur(2px)',
-        opacity: 0.85,
-        zIndex: 10,
-        left: isMobile ? '80%' : '70%',
-        height: isMobile ? '16%' : '28%',
-        bottom: isMobile ? '32%' : '12%',
-      };
-    case 'back':
-      return {
-        transform: 'translateX(-50%) scale(1)',
-        filter: 'blur(4px)',
-        opacity: 1,
-        zIndex: 5,
-        left: '50%',
-        height: isMobile ? '13%' : '22%',
-        bottom: isMobile ? '32%' : '12%',
-      };
-  }
+function getScreenSize(w: number): ScreenSize {
+  if (w < 640) return 'mobile';
+  if (w < 1024) return 'tablet';
+  return 'desktop';
+}
+
+function getRoleStyle(role: Role, size: ScreenSize) {
+  const s = {
+    mobile: {
+      center: { scale: 1.15, heightPct: 48, bottomPct: 22, leftPct: 50, blur: 0, opacity: 1, z: 20 },
+      left:    { scale: 0.7,  heightPct: 14, bottomPct: 32, leftPct: 18, blur: 3, opacity: 0.6, z: 10 },
+      right:   { scale: 0.7,  heightPct: 14, bottomPct: 32, leftPct: 82, blur: 3, opacity: 0.6, z: 10 },
+      back:    { scale: 0.55, heightPct: 11, bottomPct: 32, leftPct: 50, blur: 5, opacity: 0.4, z: 5 },
+    },
+    tablet: {
+      center: { scale: 1.4,  heightPct: 62, bottomPct: 10, leftPct: 50, blur: 0, opacity: 1, z: 20 },
+      left:    { scale: 0.8, heightPct: 22, bottomPct: 18, leftPct: 22, blur: 2, opacity: 0.8, z: 10 },
+      right:   { scale: 0.8, heightPct: 22, bottomPct: 18, leftPct: 78, blur: 2, opacity: 0.8, z: 10 },
+      back:    { scale: 0.6, heightPct: 16, bottomPct: 18, leftPct: 50, blur: 4, opacity: 0.5, z: 5 },
+    },
+    desktop: {
+      center: { scale: 1.65, heightPct: 86, bottomPct: 0, leftPct: 50, blur: 0, opacity: 1, z: 20 },
+      left:    { scale: 0.85, heightPct: 26, bottomPct: 10, leftPct: 28, blur: 2, opacity: 0.85, z: 10 },
+      right:   { scale: 0.85, heightPct: 26, bottomPct: 10, leftPct: 72, blur: 2, opacity: 0.85, z: 10 },
+      back:    { scale: 0.6,  heightPct: 18, bottomPct: 10, leftPct: 50, blur: 5, opacity: 0.6, z: 5 },
+    },
+  };
+
+  const v = s[size][role];
+  return {
+    transform: `translateX(-50%) scale(${v.scale})`,
+    filter: `blur(${v.blur}px)`,
+    opacity: v.opacity,
+    zIndex: v.z,
+    left: `${v.leftPct}%`,
+    height: `${v.heightPct}%`,
+    bottom: `${v.bottomPct}%`,
+  };
 }
 
 const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E")`;
@@ -76,19 +72,14 @@ const GRAIN_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='h
 export default function ToonHubHero() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [screenSize, setScreenSize] = useState<ScreenSize>(() => getScreenSize(window.innerWidth));
 
-  // Preload images on mount
   useEffect(() => {
-    IMAGES.forEach((img) => {
-      const i = new Image();
-      i.src = img.src;
-    });
+    IMAGES.forEach((img) => { const i = new Image(); i.src = img.src; });
   }, []);
 
-  // Responsive listener
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 640);
+    const onResize = () => setScreenSize(getScreenSize(window.innerWidth));
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -113,6 +104,7 @@ export default function ToonHubHero() {
   }), [activeIndex]);
 
   const bgColor = IMAGES[activeIndex].bg;
+  const isMobile = screenSize === 'mobile';
 
   return (
     <div
@@ -129,7 +121,7 @@ export default function ToonHubHero() {
         style={{
           position: 'relative',
           width: '100%',
-          height: '100vh',
+          height: '100dvh',
           overflow: 'hidden',
         }}
       >
@@ -143,7 +135,7 @@ export default function ToonHubHero() {
             backgroundImage: GRAIN_SVG,
             backgroundSize: '200px 200px',
             backgroundRepeat: 'repeat',
-            opacity: 0.4,
+            opacity: isMobile ? 0.25 : 0.4,
           }}
         />
 
@@ -158,13 +150,13 @@ export default function ToonHubHero() {
             pointerEvents: 'none',
             userSelect: 'none',
             zIndex: 2,
-            top: '18%',
+            top: isMobile ? '8%' : screenSize === 'tablet' ? '10%' : '12%',
           }}
         >
           <span
             style={{
               fontFamily: "'Anton', sans-serif",
-              fontSize: 'clamp(90px, 28vw, 380px)',
+              fontSize: isMobile ? 'clamp(48px, 20vw, 90px)' : 'clamp(90px, 28vw, 380px)',
               fontWeight: 900,
               color: 'white',
               opacity: 1,
@@ -182,15 +174,14 @@ export default function ToonHubHero() {
         <div
           style={{
             position: 'absolute',
-            top: '1.5rem',
-            left: '1rem',
+            top: isMobile ? '1rem' : '1.5rem',
+            left: isMobile ? '0.75rem' : '2rem',
             zIndex: 60,
           }}
-          className="sm:left-8"
         >
           <span
             style={{
-              fontSize: '0.75rem',
+              fontSize: isMobile ? '0.65rem' : '0.75rem',
               fontWeight: 600,
               textTransform: 'uppercase',
               color: 'white',
@@ -208,18 +199,19 @@ export default function ToonHubHero() {
             const role = (Object.entries(roles) as [Role, number][]).find(
               ([, idx]) => idx === i
             )![0];
-            const style = getRoleStyle(role, isMobile);
+            const style = getRoleStyle(role, screenSize);
 
             return (
               <div
                 key={i}
                 style={{
                   position: 'absolute',
-                  aspectRatio: '0.6 / 1',
+                  aspectRatio: '0.56 / 1',
                   ...style,
                   transition:
                     'transform 650ms cubic-bezier(0.4,0,0.2,1), filter 650ms cubic-bezier(0.4,0,0.2,1), opacity 650ms cubic-bezier(0.4,0,0.2,1), left 650ms cubic-bezier(0.4,0,0.2,1)',
                   willChange: 'transform, filter, opacity',
+                  display: role === 'back' && isMobile ? 'none' : 'block',
                 }}
               >
                 <img
@@ -244,51 +236,47 @@ export default function ToonHubHero() {
         <div
           style={{
             position: 'absolute',
-            bottom: '1.5rem',
-            left: '1rem',
+            bottom: isMobile ? '1rem' : '1.5rem',
+            left: isMobile ? '0.75rem' : '2rem',
             zIndex: 60,
-            maxWidth: 320,
+            maxWidth: isMobile ? 220 : 320,
           }}
-          className="sm:bottom-20 sm:left-24"
         >
           <p
             style={{
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.02em',
-              marginBottom: '0.5rem',
-              fontSize: '1rem',
+              marginBottom: isMobile ? '0.25rem' : '0.5rem',
+              fontSize: isMobile ? '0.8rem' : '1rem',
               color: 'white',
               opacity: 0.95,
             }}
-            className="sm:mb-3 sm:text-[22px]"
           >
             TOONHUB FIGURINES
           </p>
 
           <p
             style={{
-              fontSize: '0.75rem',
+              fontSize: isMobile ? '0.65rem' : '0.75rem',
               color: 'white',
               opacity: 0.85,
               lineHeight: 1.6,
-              marginBottom: '1rem',
-              display: isMobile ? 'none' : 'block',
+              marginBottom: isMobile ? '0.5rem' : '1rem',
             }}
-            className="sm:text-sm sm:mb-5"
           >
-            The artwork is stunning, shipped fully prepared. The finish is a
-            vision, the 3D craft is flawless. Many thanks! Wishing you the win.
-            Order now.
+            {isMobile
+              ? 'Stunning 3D artwork, shipped ready. Order now.'
+              : 'The artwork is stunning, shipped fully prepared. The finish is a vision, the 3D craft is flawless. Many thanks! Wishing you the win. Order now.'}
           </p>
 
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem' }}>
             <button
               type="button"
               onClick={() => navigate('prev')}
               style={{
-                width: '3rem',
-                height: '3rem',
+                width: isMobile ? '2.5rem' : '3rem',
+                height: isMobile ? '2.5rem' : '3rem',
                 backgroundColor: 'transparent',
                 border: '2px solid white',
                 borderRadius: '9999px',
@@ -300,14 +288,14 @@ export default function ToonHubHero() {
               }}
               className="sm:w-16 sm:h-16 hover:scale-[1.08] hover:bg-white/12"
             >
-              <ArrowLeft size={26} strokeWidth={2.25} color="white" />
+              <ArrowLeft size={isMobile ? 20 : 26} strokeWidth={2.25} color="white" />
             </button>
             <button
               type="button"
               onClick={() => navigate('next')}
               style={{
-                width: '3rem',
-                height: '3rem',
+                width: isMobile ? '2.5rem' : '3rem',
+                height: isMobile ? '2.5rem' : '3rem',
                 backgroundColor: 'transparent',
                 border: '2px solid white',
                 borderRadius: '9999px',
@@ -319,7 +307,7 @@ export default function ToonHubHero() {
               }}
               className="sm:w-16 sm:h-16 hover:scale-[1.08] hover:bg-white/12"
             >
-              <ArrowRight size={26} strokeWidth={2.25} color="white" />
+              <ArrowRight size={isMobile ? 20 : 26} strokeWidth={2.25} color="white" />
             </button>
           </div>
         </div>
@@ -328,11 +316,10 @@ export default function ToonHubHero() {
         <div
           style={{
             position: 'absolute',
-            bottom: '1.5rem',
-            right: '1rem',
+            bottom: isMobile ? '1rem' : '1.5rem',
+            right: isMobile ? '0.75rem' : '2.5rem',
             zIndex: 60,
           }}
-          className="sm:bottom-20 sm:right-10"
         >
           <a
             href="#"
@@ -340,7 +327,7 @@ export default function ToonHubHero() {
               display: 'flex',
               alignItems: 'center',
               fontFamily: "'Anton', sans-serif",
-              fontSize: 'clamp(20px, 4vw, 56px)',
+              fontSize: isMobile ? 'clamp(14px, 4.5vw, 20px)' : 'clamp(20px, 4vw, 56px)',
               fontWeight: 400,
               color: 'white',
               opacity: 0.95,
@@ -355,9 +342,9 @@ export default function ToonHubHero() {
             DISCOVER IT
             <ArrowRight
               style={{
-                width: '1.25rem',
-                height: '1.25rem',
-                marginLeft: '0.5rem',
+                width: isMobile ? '0.85rem' : '1.25rem',
+                height: isMobile ? '0.85rem' : '1.25rem',
+                marginLeft: isMobile ? '0.3rem' : '0.5rem',
               }}
               className="sm:w-8 sm:h-8"
               strokeWidth={2.25}
