@@ -2,6 +2,8 @@
 
 A full-viewport character-figurine carousel hero section built with React 19 + TypeScript + Vite 8 + Tailwind CSS 4.
 
+![Demo Screenshot](toonhub-demo.png)
+
 ## Features
 
 - 4-figure carousel with role-based positioning (center, left, right, back)
